@@ -1,0 +1,11 @@
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["lib"]
+
+[profile.default.fuzz]
+runs = 256
+
+[rpc_endpoints]
+fuji = "${FUJI_RPC_URL}"
+avalanche = "${AVALANCHE_RPC_URL}"

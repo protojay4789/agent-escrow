@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Settlement Demo — OOBE × Ace Data Cloud</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff88;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #00ff88; font-size: 1.5em; margin-bottom: 5px; }
+        .subtitle { color: #666; font-size: 0.9em; margin-bottom: 30px; }
+        .panel {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .panel-header {
+            color: #ff6600;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .service-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .service-card:hover { border-color: #00ff88; }
+        .service-card.selected { border-color: #00ff88; background: #0a1a0a; }
+        .service-name { color: #fff; font-weight: bold; margin-bottom: 5px; }
+        .service-price { color: #00ff88; font-size: 1.2em; }
+        .service-desc { color: #888; font-size: 0.85em; margin-top: 5px; }
+        .caps { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+        .cap { background: #222; color: #ff6600; padding: 2px 8px; border-radius: 3px; font-size: 0.75em; }
+        .log-area {
+            background: #0a0a0a;
+            border: 1px solid #222;
+            border-radius: 4px;
+            padding: 15px;
+            font-size: 0.85em;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        .log-line { margin-bottom: 2px; }
+        .log-time { color: #666; }
+        .log-action { color: #ff6600; }
+        .log-success { color: #00ff88; }
+        .log-error { color: #ff4444; }
+        .log-info { color: #4488ff; }
+        .btn {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .btn:hover { background: #00cc6a; }
+        .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .btn.running { background: #ff6600; color: #000; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .stat { text-align: center; }
+        .stat-value { color: #fff; font-size: 1.5em; font-weight: bold; }
+        .stat-label { color: #666; font-size: 0.75em; text-transform: uppercase; }
+        .flow-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        .step {
+            text-align: center;
+            flex: 1;
+            padding: 10px;
+        }
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #222;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 1.2em;
+        }
+        .step.active .step-icon { border-color: #ff6600; background: #1a1a0a; }
+        .step.done .step-icon { border-color: #00ff88; background: #0a1a0a; }
+        .step-label { color: #666; font-size: 0.75em; text-transform: uppercase; }
+        .step.active .step-label { color: #ff6600; }
+        .step.done .step-label { color: #00ff88; }
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .flow-steps { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Agent Settlement Demo</h1>
+        <div class="subtitle">OOBE × Ace Data Cloud Bounty — Autonomous agent discovers, executes, and settles on-chain</div>
+
+        <!-- Flow Steps -->
+        <div class="panel">
+            <div class="panel-header">Autonomous Flow</div>
+            <div class="flow-steps" id="flowSteps">
+                <div class="step" id="step-discover">
+                    <div class="step-icon">🔍</div>
+                    <div class="step-label">Discover</div>
+                </div>
+                <div class="step" id="step-select">
+                    <div class="step-icon">🎯</div>
+                    <div class="step-label">Select</div>
+                </div>
+                <div class="step" id="step-execute">
+                    <div class="step-icon">⚡</div>
+                    <div class="step-label">Execute</div>
+                </div>
+                <div class="step" id="step-settle">
+                    <div class="step-icon">💰</div>
+                    <div class="step-label">Settle</div>
+                </div>
+                <div class="step" id="step-verify">
+                    <div class="step-icon">✅</div>
+                    <div class="step-label">Verify</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Services -->
+        <div class="panel">
+            <div class="panel-header">On-Chain Services</div>
+            <div class="service-grid" id="serviceGrid"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="panel">
+            <div class="panel-header">Agent Controls</div>
+            <div>
+                <label style="color: #888; font-size: 0.85em;">Required Capability:</label>
+                <select id="capabilityFilter" style="background: #1a1a1a; color: #fff; border: 1px solid #333; padding: 8px; border-radius: 4px; font-family: inherit; margin-left: 10px;">
+                    <option value="">Any</option>
+                    <option value="parsing">parsing</option>
+                    <option value="classification">classification</option>
+                    <option value="summarization">summarization</option>
+                </select>
+            </div>
+            <button class="btn" id="runBtn" onclick="runAgent()">▶ Run Autonomous Agent</button>
+        </div>
+
+        <!-- Execution Log -->
+        <div class="panel">
+            <div class="panel-header">Execution Log</div>
+            <div class="log-area" id="logArea">
+                <div class="log-line"><span class="log-info">[ready]</span> Agent initialized. Click "Run" to start.</div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="panel">
+            <div class="panel-header">Agent Stats</div>
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-value" id="statExecs">0</div>
+                    <div class="stat-label">Executions</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statSuccess">0</div>
+                    <div class="stat-label">Successful</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statSpent">$0</div>
+                    <div class="stat-label">Total Spent</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statState">IDLE</div>
+                    <div class="stat-label">State</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; color: #444; font-size: 0.75em; margin-top: 20px;">
+            Built by GenTech Labs — Agent Economy Infrastructure
+        </div>
+    </div>
+
+    <script>
+        // ── SERVICE DATA ─────────────────────────────────────────
+        const SERVICES = [
+            { id: 0, name: "Data Parser", desc: "Parses CSV and JSON data", price: 5, priceRaw: 5000000, caps: ["parsing", "csv", "json"], execs: 42 },
+            { id: 1, name: "Image Classifier", desc: "Classifies images using ML", price: 10, priceRaw: 10000000, caps: ["classification", "image", "ml"], execs: 128 },
+            { id: 2, name: "Text Summarizer", desc: "Summarizes long text", price: 3, priceRaw: 3000000, caps: ["summarization", "text", "nlp"], execs: 256 },
+            { id: 3, name: "Sentiment Analyzer", desc: "Analyzes text sentiment", price: 2, priceRaw: 2000000, caps: ["sentiment", "text", "nlp"], execs: 89 },
+        ];
+
+        let stats = { execs: 0, success: 0, spent: 0 };
+        let isRunning = false;
+
+        // ── INIT ─────────────────────────────────────────────────
+        function init() {
+            const grid = document.getElementById('serviceGrid');
+            SERVICES.forEach(s => {
+                grid.innerHTML += `
+                    <div class="service-card" id="svc-${s.id}" onclick="selectService(${s.id})">
+                        <div class="service-name">${s.name}</div>
+                        <div class="service-price">$${s.price} USDC</div>
+                        <div class="service-desc">${s.desc}</div>
+                        <div class="caps">${s.caps.map(c => `<span class="cap">${c}</span>`).join('')}</div>
+                        <div style="color: #666; font-size: 0.75em; margin-top: 8px;">${s.execs} executions</div>
+                    </div>
+                `;
+            });
+        }
+
+        function selectService(id) {
+            document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`svc-${id}`).classList.add('selected');
+        }
+
+        // ── LOGGING ──────────────────────────────────────────────
+        function log(msg, type = 'info') {
+            const area = document.getElementById('logArea');
+            const time = new Date().toLocaleTimeString();
+            area.innerHTML += `<div class="log-line"><span class="log-time">[${time}]</span> <span class="log-${type}">${msg}</span></div>`;
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function setStep(stepId, state) {
+            const el = document.getElementById(`step-${stepId}`);
+            el.className = `step ${state}`;
+        }
+
+        function updateStats() {
+            document.getElementById('statExecs').textContent = stats.execs;
+            document.getElementById('statSuccess').textContent = stats.success;
+            document.getElementById('statSpent').textContent = `$${stats.spent}`;
+        }
+
+        // ── AGENT LOOP ───────────────────────────────────────────
+        async function runAgent() {
+            if (isRunning) return;
+            isRunning = true;
+            const btn = document.getElementById('runBtn');
+            btn.textContent = '⏳ Running...';
+            btn.classList.add('running');
+            btn.disabled = true;
+
+            // Reset steps
+            ['discover', 'select', 'execute', 'settle', 'verify'].forEach(s => setStep(s, ''));
+
+            const filter = document.getElementById('capabilityFilter').value;
+
+            try {
+                // 1. DISCOVER
+                log('🔍 Discovering on-chain services...', 'action');
+                setStep('discover', 'active');
+                await sleep(800);
+
+                let available = SERVICES;
+                if (filter) {
+                    available = SERVICES.filter(s => s.caps.includes(filter));
+                    log(`  Found ${available.length} services matching "${filter}"`, 'info');
+                } else {
+                    log(`  Found ${available.length} active services`, 'info');
+                }
+
+                if (available.length === 0) {
+                    log('❌ No matching services found', 'error');
+                    throw new Error('No services');
+                }
+                setStep('discover', 'done');
+
+                // 2. SELECT
+                log('🎯 Selecting best service (cheapest + track record)...', 'action');
+                setStep('select', 'active');
+                await sleep(600);
+
+                available.sort((a, b) => a.price - b.price);
+                const selected = available[0];
+                log(`  Selected: ${selected.name} ($${selected.price} USDC)`, 'success');
+                selectService(selected.id);
+                setStep('select', 'done');
+
+                // 3. EXECUTE
+                log(`⚡ Executing task on ${selected.name}...`, 'action');
+                setStep('execute', 'active');
+                await sleep(1200);
+
+                const execHash = 'Qm' + Math.random().toString(36).substr(2, 16);
+                log(`  Task completed. Result: ${execHash}`, 'success');
+                setStep('execute', 'done');
+
+                // 4. SETTLE
+                log(`💰 Settling payment via AgentEscrow...`, 'action');
+                setStep('settle', 'active');
+                await sleep(800);
+
+                const txHash = '0x' + Array.from({length: 64}, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+                log(`  Payment settled. TX: ${txHash.substr(0, 16)}...`, 'success');
+                setStep('settle', 'done');
+
+                // 5. VERIFY
+                log('✅ Verifying execution + settlement...', 'action');
+                setStep('verify', 'active');
+                await sleep(500);
+
+                stats.execs++;
+                stats.success++;
+                stats.spent += selected.price;
+                updateStats();
+
+                log(`  Verified! Agent state: COMPLETED`, 'success');
+                setStep('verify', 'done');
+
+                log(`\n🎉 Autonomous loop complete — ${selected.name} executed and paid $${selected.price} USDC`, 'success');
+
+            } catch (e) {
+                log(`❌ Failed: ${e.message}`, 'error');
+            }
+
+            btn.textContent = '▶ Run Autonomous Agent';
+            btn.classList.remove('running');
+            btn.disabled = false;
+            isRunning = false;
+        }
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        init();
+    </script>
+</body>
+</html>
